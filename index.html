@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PulseOps infrastructure monitoring and incident response dashboard demo.">
+  <title>PulseOps — Operations Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><div class="brand-mark"><span></span><span></span><span></span></div><div><strong>pulse<span>ops</span></strong><small>OPERATIONS CENTER</small></div></div>
+      <div class="workspace"><span class="workspace-dot"></span><div><b>Production environment</b><small>Demo infrastructure</small></div><span class="chevron">⌄</span></div>
+      <div class="nav-label">WORKSPACE</div>
+      <nav id="navigation">
+        <button class="nav-item active" data-page="overview"><span class="nav-icon">▦</span> Overview</button>
+        <button class="nav-item" data-page="services"><span class="nav-icon">◈</span> Services <span class="nav-count" id="serviceNavCount">8</span></button>
+        <button class="nav-item" data-page="incidents"><span class="nav-icon">⚑</span> Incidents <span class="nav-count alert-count" id="incidentNavCount">3</span></button>
+        <button class="nav-item" data-page="alerts"><span class="nav-icon">♧</span> Alert rules</button>
+        <button class="nav-item" data-page="activity"><span class="nav-icon">↻</span> Activity log</button>
+      </nav>
+      <div class="nav-label tools-label">TOOLS</div>
+      <button class="nav-item" id="simulateBtn"><span class="nav-icon">⚡</span> Simulate incident</button>
+      <button class="nav-item" id="exportBtn"><span class="nav-icon">⇩</span> Export report</button>
+      <div class="sidebar-bottom"><div class="user-card"><div class="avatar">DS</div><div><b>Dora Sianipar</b><small>Junior IT Operations</small></div><span class="more">•••</span></div><div class="sidebar-foot">PULSEOPS DEMO <span>v1.0.0</span></div></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><button class="mobile-menu" id="mobileMenu">☰</button><div class="breadcrumb">Workspace <span>/</span> <b id="pageName">Overview</b></div><div class="top-actions"><div class="live-pill"><i></i> LIVE SIMULATION</div><button class="icon-button" id="themeBtn" title="Toggle theme">◐</button><button class="icon-button notification" title="Notifications">♧<span></span></button><div class="top-avatar">DS</div></div></header>
+      <div class="content">
+        <section class="page-head"><div><div class="eyebrow">MONITORING / PRODUCTION</div><h1 id="heading">Good evening, Dora <span>✦</span></h1><p id="subheading">Here's what's happening across your infrastructure.</p></div><div class="head-right"><div class="date-chip">◷ <span id="clock">--:--:--</span> WIB</div><button class="primary-btn" id="newIncidentBtn">＋ New incident</button></div></section>
+        <section class="page" id="overviewPage">
+          <div class="status-banner"><div class="status-symbol">✓</div><div><b id="overallTitle">All systems operational</b><small id="overallDesc">Your monitored services are running within expected thresholds.</small></div><div class="banner-right">Last checked <b>just now</b><span class="pulse-dot"></span></div></div>
+          <div class="metric-grid">
+            <article class="metric-card"><div class="metric-top"><span>Service availability</span><span class="metric-icon mint">◈</span></div><div class="metric-value" id="availability">99.98<span>%</span></div><div class="metric-foot"><span class="trend up">↗ 0.04%</span> <span>vs last 24 hours</span></div><div class="mini-chart mint-chart"></div></article>
+            <article class="metric-card"><div class="metric-top"><span>Active incidents</span><span class="metric-icon coral">⚑</span></div><div class="metric-value" id="activeIncidents">3</div><div class="metric-foot"><span class="trend down">● 1 critical</span> <span>needs attention</span></div><div class="mini-chart coral-chart"></div></article>
+            <article class="metric-card"><div class="metric-top"><span>Avg. response time</span><span class="metric-icon blue">⌁</span></div><div class="metric-value" id="response">184<span> ms</span></div><div class="metric-foot"><span class="trend up">↘ 12 ms</span> <span>vs last 24 hours</span></div><div class="mini-chart blue-chart"></div></article>
+            <article class="metric-card"><div class="metric-top"><span>Healthy services</span><span class="metric-icon violet">✦</span></div><div class="metric-value" id="healthyServices">6<span>/8</span></div><div class="metric-foot"><span class="trend neutral">75% operational</span> <span>service health</span></div><div class="mini-chart violet-chart"></div></article>
+          </div>
+          <div class="section-grid main-grid"><article class="panel performance-panel"><div class="panel-head"><div><h2>Performance overview</h2><p>Infrastructure metrics across the last 12 hours</p></div><select id="chartMetric"><option value="response">Response time</option><option value="cpu">CPU utilization</option><option value="memory">Memory usage</option></select></div><div class="chart-legend"><span><i class="legend-dot purple"></i> Average</span><span><i class="legend-dot pale"></i> Threshold</span><div class="chart-value" id="chartValue">184 ms <small>current</small></div></div><div class="chart-wrap"><canvas id="performanceChart"></canvas></div><div class="chart-axis"><span>00:00</span><span>02:00</span><span>04:00</span><span>06:00</span><span>08:00</span><span>10:00</span><span>12:00</span></div></article>
+            <article class="panel service-health-panel"><div class="panel-head"><div><h2>Service health</h2><p>Current status distribution</p></div><button class="text-btn" data-goto="services">View all ↗</button></div><div class="health-ring-wrap"><div class="health-ring" id="healthRing"><div class="ring-center"><b id="ringHealthy">6</b><small>of 8 services</small></div></div><div class="health-legend"><div><i class="health-dot healthy"></i><span>Healthy</span><b id="legendHealthy">6</b></div><div><i class="health-dot degraded"></i><span>Degraded</span><b id="legendDegraded">1</b></div><div><i class="health-dot down"></i><span>Down</span><b id="legendDown">1</b></div></div></div></article>
+          </div>
+          <div class="section-grid lower-grid"><article class="panel services-panel"><div class="panel-head"><div><h2>Monitored services</h2><p>Service status and key metrics</p></div><button class="text-btn" data-goto="services">Manage services ↗</button></div><div class="table-wrap"><table><thead><tr><th>SERVICE</th><th>STATUS</th><th>RESPONSE</th><th>UPTIME</th></tr></thead><tbody id="overviewServices"></tbody></table></div></article><article class="panel incidents-panel"><div class="panel-head"><div><h2>Recent incidents</h2><p>Latest operational events</p></div><button class="text-btn" data-goto="incidents">View all ↗</button></div><div id="recentIncidents" class="incident-list"></div></article></div>
+        </section>
+        <section class="page hidden" id="servicesPage"><div class="panel"><div class="panel-head"><div><h2>Service inventory</h2><p>Monitor application and infrastructure components</p></div><div class="filters"><input id="serviceSearch" placeholder="Search service..." /><select id="serviceFilter"><option value="all">All statuses</option><option value="healthy">Healthy</option><option value="degraded">Degraded</option><option value="down">Down</option></select></div></div><div class="table-wrap"><table><thead><tr><th>SERVICE</th><th>TYPE</th><th>STATUS</th><th>RESPONSE</th><th>CPU</th><th>MEMORY</th><th>UPTIME</th></tr></thead><tbody id="servicesTable"></tbody></table></div></div></section>
+        <section class="page hidden" id="incidentsPage"><div class="panel"><div class="panel-head"><div><h2>Incident management</h2><p>Track, acknowledge and resolve operational incidents</p></div><div class="filters"><select id="incidentFilter"><option value="all">All incidents</option><option value="open">Open</option><option value="acknowledged">Acknowledged</option><option value="resolved">Resolved</option></select><button class="primary-btn" id="incidentCreatePage">＋ Create incident</button></div></div><div id="incidentCards" class="incident-grid"></div></div></section>
+        <section class="page hidden" id="alertsPage"><div class="panel"><div class="panel-head"><div><h2>Alert rules</h2><p>Threshold-based monitoring rules (simulation)</p></div><button class="primary-btn" id="addRuleBtn">＋ Add rule</button></div><div class="alert-rules" id="alertRules"></div></div></section>
+        <section class="page hidden" id="activityPage"><div class="panel"><div class="panel-head"><div><h2>Activity log</h2><p>Audit trail of operations in this demo</p></div><button class="text-btn" id="clearActivity">Clear history</button></div><div id="activityList" class="activity-list"></div></div></section>
+        <footer class="footer"><span>PulseOps <b>•</b> Infrastructure Monitoring Demo</span><span>Built for learning IT Operations · <a href="README.md">Documentation</a></span></footer>
+      </div>
+    </main>
+  </div>
+  <div class="modal-backdrop hidden" id="incidentModal"><div class="modal"><div class="modal-head"><div><h2>Create incident</h2><p>Document an operational issue</p></div><button class="close-modal" data-close>×</button></div><form id="incidentForm"><label>Incident title<input required name="title" placeholder="e.g. API latency above threshold"></label><div class="form-row"><label>Severity<select name="severity"><option>Critical</option><option selected>High</option><option>Medium</option><option>Low</option></select></label><label>Affected service<select name="service" id="incidentService"></select></label></div><label>Description<textarea name="description" placeholder="Describe the symptoms, impact, and observations..." rows="3"></textarea><button class="primary-btn full-btn" type="submit">Create incident</button></form></div></div>
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

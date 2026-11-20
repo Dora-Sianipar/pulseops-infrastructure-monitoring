@@ -1,0 +1,73 @@
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const seedServices=[
+{id:'api-gateway',name:'API Gateway',type:'Application',status:'healthy',response:124,cpu:32,memory:61,uptime:'99.99%',symbol:'⌘'},
+{id:'web-frontend',name:'Web Frontend',type:'Web',status:'healthy',response:89,cpu:21,memory:44,uptime:'99.98%',symbol:'◫'},
+{id:'auth-service',name:'Authentication',type:'Security',status:'healthy',response:110,cpu:26,memory:52,uptime:'99.99%',symbol:'◉'},
+{id:'database-primary',name:'Primary Database',type:'Database',status:'degraded',response:286,cpu:78,memory:84,uptime:'99.92%',symbol:'▤'},
+{id:'cache-node',name:'Cache Node',type:'Infrastructure',status:'healthy',response:42,cpu:18,memory:37,uptime:'99.97%',symbol:'▣'},
+{id:'payment-service',name:'Payment Service',type:'Application',status:'down',response:0,cpu:0,memory:0,uptime:'98.76%',symbol:'＄'},
+{id:'worker-queue',name:'Background Worker',type:'Infrastructure',status:'healthy',response:156,cpu:44,memory:63,uptime:'99.95%',symbol:'⚙'},
+{id:'storage-service',name:'Object Storage',type:'Storage',status:'healthy',response:203,cpu:29,memory:57,uptime:'99.98%',symbol:'▱'}
+];
+const seedIncidents=[
+{id:1001,title:'Payment service unavailable',severity:'Critical',service:'Payment Service',status:'open',description:'Health checks failing. Payment API is returning 503 responses.',time:'12 min ago'},
+{id:1002,title:'Database memory usage elevated',severity:'High',service:'Primary Database',status:'acknowledged',description:'Memory usage has crossed the 80% warning threshold.',time:'34 min ago'},
+{id:1003,title:'Queue processing latency',severity:'Medium',service:'Background Worker',status:'open',description:'Job processing latency is above the expected baseline.',time:'1 hr ago'}
+];
+const seedActivity=[
+{title:'Monitoring initialized',desc:'PulseOps demo monitoring started for 8 services.',time:'Just now'},
+{title:'Alert triggered',desc:'Payment Service — health check failure detected.',time:'12 min ago'},
+{title:'Incident acknowledged',desc:'Database memory usage elevated acknowledged by operator.',time:'34 min ago'}
+];
+let services=JSON.parse(localStorage.getItem('pulse_services')||'null')||seedServices;
+let incidents=JSON.parse(localStorage.getItem('pulse_incidents')||'null')||seedIncidents;
+let activities=JSON.parse(localStorage.getItem('pulse_activity')||'null')||seedActivity;
+const rules=[
+{name:'CPU utilization',desc:'Trigger when CPU usage exceeds 85% for 5 minutes',metric:'CPU > 85%',enabled:true},
+{name:'Memory pressure',desc:'Trigger when memory usage exceeds 80% for 3 minutes',metric:'Memory > 80%',enabled:true},
+{name:'Service availability',desc:'Trigger after 3 consecutive health check failures',metric:'Health checks × 3',enabled:true},
+{name:'Response time',desc:'Trigger when average response time exceeds 500 ms',metric:'Latency > 500ms',enabled:true}
+];
+function save(){localStorage.setItem('pulse_services',JSON.stringify(services));localStorage.setItem('pulse_incidents',JSON.stringify(incidents));localStorage.setItem('pulse_activity',JSON.stringify(activities))}
+function log(title,desc){activities.unshift({title,desc,time:'Just now'});activities=activities.slice(0,80);save();renderActivity()}
+function statusBadge(s){return `<span class="status-badge ${s}">${s[0].toUpperCase()+s.slice(1)}</span>`}
+function renderOverview(){
+ const healthy=services.filter(s=>s.status==='healthy').length,degraded=services.filter(s=>s.status==='degraded').length,down=services.filter(s=>s.status==='down').length,active=incidents.filter(i=>i.status!=='resolved').length;
+ $('#healthyServices').innerHTML=`${healthy}<span>/${services.length}</span>`;$('#activeIncidents').textContent=active;$('#incidentNavCount').textContent=active;
+ $('#ringHealthy').textContent=healthy;$('#legendHealthy').textContent=healthy;$('#legendDegraded').textContent=degraded;$('#legendDown').textContent=down;
+ const ring=$('#healthRing');ring.style.background=`conic-gradient(var(--mint) 0 ${healthy/services.length*100}%,var(--amber) ${healthy/services.length*100}% ${(healthy+degraded)/services.length*100}%,var(--coral) ${(healthy+degraded)/services.length*100}% 100%)`;
+ $('#overallTitle').textContent=down?'Service disruption detected':degraded?'Some services degraded':'All systems operational';$('#overallDesc').textContent=down?`${down} service(s) are down. Review incidents and affected components.`:degraded?'One or more services require attention.':'Your monitored services are running within expected thresholds.';
+ $('#overallTitle').style.color=down?'var(--coral)':degraded?'var(--amber)':'var(--mint)';
+ $('#overviewServices').innerHTML=services.slice(0,5).map(s=>`<tr><td><div class="service-name"><span class="service-symbol">${s.symbol}</span>${s.name}</div></td><td>${statusBadge(s.status)}</td><td>${s.response?s.response+' ms':'—'}</td><td>${s.uptime}</td></tr>`).join('');
+ $('#recentIncidents').innerHTML=incidents.slice(0,4).map(i=>incidentListItem(i)).join('');
+ $('#serviceNavCount').textContent=services.length;drawChart();
+}
+function incidentListItem(i){return `<div class="incident-item"><div class="incident-severity ${i.severity==='Medium'?'medium':i.severity==='Low'?'low':''}"></div><div><b>${escapeHTML(i.title)}</b><small>${escapeHTML(i.service)} · ${i.time}</small></div><div class="incident-meta">${severityBadge(i.severity)}<br>${statusBadge(i.status)}</div></div>`}
+function severityBadge(s){let c=s.toLowerCase();return `<span class="status-badge ${c==='critical'?'down':c==='high'?'degraded':c==='medium'?'degraded':'healthy'}">${s}</span>`}
+function renderServices(){let q=($('#serviceSearch')?.value||'').toLowerCase(),f=$('#serviceFilter')?.value||'all';let data=services.filter(s=>(s.name+' '+s.type).toLowerCase().includes(q)&&(f==='all'||s.status===f));$('#servicesTable').innerHTML=data.map(s=>`<tr><td><div class="service-name"><span class="service-symbol">${s.symbol}</span>${s.name}</div></td><td>${s.type}</td><td>${statusBadge(s.status)}</td><td>${s.response?s.response+' ms':'—'}</td><td>${s.cpu}%</td><td>${s.memory}%</td><td>${s.uptime}</td></tr>`).join('')||'<tr><td colspan="7">No matching services.</td></tr>'}
+function renderIncidents(){let f=$('#incidentFilter')?.value||'all';let data=incidents.filter(i=>f==='all'||i.status===f);$('#incidentCards').innerHTML=data.map(i=>`<article class="incident-card"><div class="incident-card-head">${severityBadge(i.severity)}${statusBadge(i.status)}</div><h3>${escapeHTML(i.title)}</h3><p>${escapeHTML(i.description)}<br><b>Service:</b> ${escapeHTML(i.service)} · <b>Reported:</b> ${i.time}</p><div class="incident-actions">${i.status==='open'?`<button class="small-btn" data-ack="${i.id}">Acknowledge</button>`:''}${i.status!=='resolved'?`<button class="small-btn" data-resolve="${i.id}">Resolve</button>`:`<button class="small-btn" disabled>Resolved</button>`}</div></article>`).join('')||'<p class="muted">No incidents in this view.</p>'}
+function renderRules(){$('#alertRules').innerHTML=rules.map(r=>`<div class="rule-row"><div class="rule-icon">⌁</div><div><b>${r.name}</b><small>${r.desc}</small></div><span class="rule-state">${r.enabled?'● Enabled':'○ Disabled'}</span><span class="nav-count">${r.metric}</span></div>`).join('')}
+function renderActivity(){$('#activityList').innerHTML=activities.map(a=>`<div class="activity-row"><span class="activity-marker"></span><div><b>${escapeHTML(a.title)}</b><p>${escapeHTML(a.desc)}</p></div><time>${a.time}</time></div>`).join('')||'<p>No activity recorded.</p>'}
+function drawChart(){let c=$('#performanceChart');if(!c)return;let ctx=c.getContext('2d'),rect=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;c.width=rect.width*dpr;c.height=rect.height*dpr;ctx.scale(dpr,dpr);let w=rect.width,h=rect.height;let metric=$('#chartMetric').value;let values=metric==='response'?[150,180,165,210,195,260,220,190,184,200,172,184]:metric==='cpu'?[28,34,38,42,56,47,62,55,48,32,38,42]:[50,52,56,59,62,67,72,68,65,63,61,64];let max=metric==='response'?350:100;let threshold=metric==='response'?300:85;let labels=[0,1,2,3,4,5];ctx.clearRect(0,0,w,h);ctx.font='10px DM Sans';for(let i=0;i<4;i++){let y=12+i*(h-28)/3;ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--border');ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}let points=values.map((v,i)=>({x:i/(values.length-1)*w,y:h-20-v/max*(h-38)}));let ty=h-20-threshold/max*(h-38);ctx.setLineDash([5,5]);ctx.strokeStyle='#8d98aa66';ctx.beginPath();ctx.moveTo(0,ty);ctx.lineTo(w,ty);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);points.forEach(p=>ctx.lineTo(p.x,p.y));ctx.strokeStyle='#9c88ff';ctx.lineWidth=2.5;ctx.stroke();ctx.lineTo(w,h-15);ctx.lineTo(0,h-15);ctx.closePath();let grad=ctx.createLinearGradient(0,0,0,h);grad.addColorStop(0,'#9c88ff40');grad.addColorStop(1,'#9c88ff00');ctx.fillStyle=grad;ctx.fill();let p=points.at(-1);ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle='#9c88ff';ctx.fill();$('#chartValue').innerHTML=(metric==='response'?'184 ms':metric==='cpu'?'42%':'64%')+' <small>current</small>'}
+function navigate(page){$$('.nav-item[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));$$('.page').forEach(p=>p.classList.add('hidden'));$('#'+page+'Page').classList.remove('hidden');let names={overview:'Overview',services:'Services',incidents:'Incidents',alerts:'Alert rules',activity:'Activity log'};$('#pageName').textContent=names[page];if(page==='overview')$('#heading').innerHTML='Good evening, Dora <span>✦</span>';else $('#heading').textContent=names[page];$('#subheading').textContent=({services:'Service inventory and health status.',incidents:'Track, acknowledge, and resolve operational issues.',alerts:'Review monitoring thresholds and alert configuration.',activity:'Audit trail of actions performed in this demo.'})[page]||'Here’s what’s happening across your infrastructure.';if(page==='services')renderServices();if(page==='incidents')renderIncidents();if(page==='alerts')renderRules();if(page==='activity')renderActivity();window.scrollTo(0,0)}
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+let toastTimer;function toast(msg){let t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800)}
+function openModal(){$('#incidentService').innerHTML=services.map(s=>`<option>${s.name}</option>`).join('');$('#incidentModal').classList.remove('hidden')}
+function closeModal(){$('#incidentModal').classList.add('hidden')}
+function createIncident(data){let item={id:Date.now(),title:data.title,severity:data.severity,service:data.service,status:'open',description:data.description||'Incident created by operator.',time:'Just now'};incidents.unshift(item);save();log('Incident created',`${item.severity} incident: ${item.title} — ${item.service}`);renderOverview();renderIncidents();closeModal();toast('Incident created successfully')}
+function simulateIncident(){let target=services.find(s=>s.status==='healthy')||services[0];target.status='down';target.response=0;let inc={id:Date.now(),title:`${target.name} health check failed`,severity:'High',service:target.name,status:'open',description:'Simulated outage: automated health check failed. Investigate service availability and dependencies.',time:'Just now'};incidents.unshift(inc);save();log('Simulated alert triggered',`${target.name} status changed to DOWN; incident opened.`);renderOverview();renderServices();renderIncidents();toast('Simulation: incident triggered for '+target.name)}
+function resolve(id){let i=incidents.find(x=>x.id==id);if(i){i.status='resolved';let s=services.find(x=>x.name===i.service);if(s&&s.status==='down'){s.status='healthy';s.response=140;s.cpu=31;s.memory=55}save();log('Incident resolved',`${i.title} marked resolved.`);renderOverview();renderIncidents();toast('Incident resolved')}}
+function acknowledge(id){let i=incidents.find(x=>x.id==id);if(i){i.status='acknowledged';save();log('Incident acknowledged',`${i.title} acknowledged by operator.`);renderOverview();renderIncidents();toast('Incident acknowledged')}}
+function exportReport(){let report={generatedAt:new Date().toISOString(),services,incidents,activities};let blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pulseops-report.json';a.click();URL.revokeObjectURL(a.href);toast('JSON report exported')}
+$$('.nav-item[data-page]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
+$$('[data-goto]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.goto)));
+$('#simulateBtn').addEventListener('click',simulateIncident);$('#exportBtn').addEventListener('click',exportReport);$('#newIncidentBtn').addEventListener('click',openModal);$('#incidentCreatePage').addEventListener('click',openModal);$$('[data-close]').forEach(b=>b.addEventListener('click',closeModal));$('#incidentModal').addEventListener('click',e=>{if(e.target.id==='incidentModal')closeModal()});
+$('#incidentForm').addEventListener('submit',e=>{e.preventDefault();createIncident(Object.fromEntries(new FormData(e.target).entries()));e.target.reset()});
+$('#incidentCards').addEventListener('click',e=>{let a=e.target.dataset.ack,r=e.target.dataset.resolve;if(a)acknowledge(a);if(r)resolve(r)});
+$('#serviceSearch').addEventListener('input',renderServices);$('#serviceFilter').addEventListener('change',renderServices);$('#incidentFilter').addEventListener('change',renderIncidents);$('#chartMetric').addEventListener('change',drawChart);
+$('#themeBtn').addEventListener('click',()=>{document.body.classList.toggle('light');localStorage.setItem('pulse_theme',document.body.classList.contains('light')?'light':'dark');drawChart()});if(localStorage.getItem('pulse_theme')==='light')document.body.classList.add('light');
+$('#mobileMenu').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));$('#clearActivity').addEventListener('click',()=>{activities=[];save();renderActivity();toast('Activity history cleared')});
+$('#addRuleBtn').addEventListener('click',()=>toast('Demo: alert rules are read-only in this version'));
+$('#exportBtn').addEventListener('click',exportReport);
+function tick(){let d=new Date();$('#clock').textContent=d.toLocaleTimeString('en-GB',{hour12:false})}tick();setInterval(tick,1000);window.addEventListener('resize',drawChart);
+renderOverview();renderServices();renderIncidents();renderRules();renderActivity();
